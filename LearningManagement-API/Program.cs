@@ -20,7 +20,7 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Auto-migrate (optioneel, nu uitgeschakeld)
+// Auto-migrate
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider
