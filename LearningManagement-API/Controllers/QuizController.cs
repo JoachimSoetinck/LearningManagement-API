@@ -2,6 +2,7 @@
 using LearningManagement_API.DTO;
 using LearningManagement_API.DTO.Quiz;
 using LearningManagement_API.Model;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -19,6 +20,7 @@ public class QuizController : ControllerBase
     }
 
     [HttpGet]
+    [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<QuizDTO>>> GetAll()
     {
         List<QuizDTO> quizzes = await _context.Quizzes
@@ -31,6 +33,7 @@ public class QuizController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<ActionResult<QuizDTO>> GetById(int id)
     {
         QuizDTO? quiz = await _context.Quizzes
@@ -47,6 +50,7 @@ public class QuizController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<QuizDTO>> Create(CreateQuizDto dto)
     {
         Quiz quiz = new Quiz
@@ -62,11 +66,11 @@ public class QuizController : ControllerBase
         await _context.SaveChangesAsync();
 
         QuizDTO result = ToQuizDto(quiz);
-
         return CreatedAtAction(nameof(GetById), new { id = quiz.Id }, result);
     }
 
     [HttpPut("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, UpdateQuizDto dto)
     {
         Quiz? quiz = await _context.Quizzes.FindAsync(id);
@@ -84,6 +88,7 @@ public class QuizController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
         Quiz? quiz = await _context.Quizzes.FindAsync(id);

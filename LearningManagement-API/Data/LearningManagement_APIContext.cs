@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using LearningManagement_API.Model;
 
@@ -23,9 +20,6 @@ namespace LearningManagement_API.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-
-            base.OnModelCreating(modelBuilder);
-
             base.OnModelCreating(modelBuilder);
 
             modelBuilder.Entity<QuizAttemptAnswer>()
@@ -41,11 +35,10 @@ namespace LearningManagement_API.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<QuizAttemptAnswer>()
-     .HasOne(qaa => qaa.SelectedAnswerOption)
-     .WithMany()
-     .HasForeignKey(qaa => qaa.SelectedAnswerOptionId)
-     .OnDelete(DeleteBehavior.NoAction);
-
+                .HasOne(qaa => qaa.SelectedAnswerOption)
+                .WithMany()
+                .HasForeignKey(qaa => qaa.SelectedAnswerOptionId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Quiz>().HasData(
                 new Quiz
@@ -72,7 +65,22 @@ namespace LearningManagement_API.Data
             );
 
             modelBuilder.Entity<User>().HasData(
-                new User { Id = 1, Email = "employee1@company.com", FullName = "Employee One" }
+                new User
+                {
+                    Id = 1,
+                    Email = "admin@test.com",
+                    FullName = "Admin User",
+                    PasswordHash = "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG",
+                    Role = "Admin"
+                },
+                new User
+                {
+                    Id = 2,
+                    Email = "employee1@company.com",
+                    FullName = "Employee One",
+                    PasswordHash = "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG",
+                    Role = "User"
+                }
             );
 
             modelBuilder.Entity<QuizAttempt>().HasData(

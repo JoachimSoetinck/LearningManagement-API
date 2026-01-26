@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LearningManagement_API.Migrations
 {
     [DbContext(typeof(LearningManagement_APIContext))]
-    [Migration("20260118183128_InitialCreate")]
+    [Migration("20260126160632_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -263,6 +263,14 @@ namespace LearningManagement_API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Users");
@@ -271,8 +279,18 @@ namespace LearningManagement_API.Migrations
                         new
                         {
                             Id = 1,
+                            Email = "admin@test.com",
+                            FullName = "Admin User",
+                            PasswordHash = "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG",
+                            Role = "Admin"
+                        },
+                        new
+                        {
+                            Id = 2,
                             Email = "employee1@company.com",
-                            FullName = "Employee One"
+                            FullName = "Employee One",
+                            PasswordHash = "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG",
+                            Role = "User"
                         });
                 });
 

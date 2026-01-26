@@ -11,6 +11,12 @@ namespace LearningManagement_API.Model
         [Required]
         public string FullName { get; set; } = null!;
 
+        [Required]
+        public string PasswordHash { get; set; } = null!;
+
+        public string Role { get; set; } = "User";
+
+
         public ICollection<QuizAttempt> QuizAttempts { get; set; } = new List<QuizAttempt>();
     }
 

@@ -37,7 +37,9 @@ namespace LearningManagement_API.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     Email = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -154,8 +156,12 @@ namespace LearningManagement_API.Migrations
 
             migrationBuilder.InsertData(
                 table: "Users",
-                columns: new[] { "Id", "Email", "FullName" },
-                values: new object[] { 1, "employee1@company.com", "Employee One" });
+                columns: new[] { "Id", "Email", "FullName", "PasswordHash", "Role" },
+                values: new object[,]
+                {
+                    { 1, "admin@test.com", "Admin User", "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG", "Admin" },
+                    { 2, "employee1@company.com", "Employee One", "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG", "User" }
+                });
 
             migrationBuilder.InsertData(
                 table: "Questions",
