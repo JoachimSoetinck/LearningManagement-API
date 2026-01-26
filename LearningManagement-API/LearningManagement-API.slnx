@@ -1,3 +1,4 @@
 <Solution>
+  <Project Path="../Learning_Management_API_Test/Learning_Management_API_Test.csproj" Id="cb1811ff-2718-44a9-bc6a-12d507589112" />
   <Project Path="LearningManagement-API.csproj" />
 </Solution>
