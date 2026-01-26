@@ -1,6 +1,7 @@
 ﻿using LearningManagement_API.Data;
 using LearningManagement_API.DTO;
 using LearningManagement_API.DTO.Quiz;
+using LearningManagement_API.Helpers;
 using LearningManagement_API.Model;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +14,12 @@ namespace LearningManagement_API.Controllers;
 public class QuizController : ControllerBase
 {
     private readonly LearningManagement_APIContext _context;
+    private readonly QuizSubmissionHelper _helper;
 
-    public QuizController(LearningManagement_APIContext context)
+    public QuizController(LearningManagement_APIContext context, QuizSubmissionHelper helper)
     {
         _context = context;
+        _helper = helper;
     }
 
     [HttpGet]
@@ -123,4 +126,43 @@ public class QuizController : ControllerBase
             }).ToList()
         };
     }
+
+
+
+    [HttpPost("{id}/submit")]
+    [Authorize]
+    public async Task<IActionResult> SubmitQuiz(int id, SubmitQuizDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+
+        if (id != dto.QuizId)
+            return BadRequest("QuizId mismatch");
+
+        int userId = _helper.GetUserId(User);
+
+        Quiz? quiz = await _helper.LoadQuizWithQuestionsAsync(id);
+        if (quiz == null)
+            return NotFound();
+
+        if (!_helper.AllQuestionsAnswered(dto, quiz))
+            return BadRequest("All questions must be answered");
+
+        double score = _helper.CalculateScore(dto, quiz);
+        bool passed = score >= quiz.PassingScorePercentage;
+
+        QuizAttempt attempt =
+            _helper.CreateQuizAttempt(dto, quiz, userId, score, passed);
+
+        _context.QuizAttempts.Add(attempt);
+        await _context.SaveChangesAsync();
+
+        return Ok(new
+        {
+            quizAttemptId = attempt.Id,
+            scorePercentage = score,
+            isPassed = passed
+        });
+    }
+
+
 }

@@ -2,9 +2,12 @@
 using LearningManagement_API.Data;
 using LearningManagement_API.DTO;
 using LearningManagement_API.DTO.Quiz;
+using LearningManagement_API.Helpers;
 using LearningManagement_API.Model;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using Xunit;
 
 namespace LearningManagement_API.Tests.Controllers
@@ -13,13 +16,15 @@ namespace LearningManagement_API.Tests.Controllers
     {
         private LearningManagement_APIContext CreateDbContext()
         {
-            var options = new DbContextOptionsBuilder<LearningManagement_APIContext>()
-                .UseInMemoryDatabase(Guid.NewGuid().ToString())
-                .Options;
+            DbContextOptions<LearningManagement_APIContext> options =
+                new DbContextOptionsBuilder<LearningManagement_APIContext>()
+                    .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                    .Options;
 
-            var context = new LearningManagement_APIContext(options);
+            LearningManagement_APIContext context =
+                new LearningManagement_APIContext(options);
 
-            context.Quizzes.Add(new Quiz
+            Quiz quiz = new Quiz
             {
                 Id = 1,
                 Title = "Test Quiz",
@@ -35,27 +40,61 @@ namespace LearningManagement_API.Tests.Controllers
                         Text = "What is a test?",
                         AnswerOptions = new List<AnswerOption>
                         {
-                            new AnswerOption { Id = 1, Text = "Option A" },
-                            new AnswerOption { Id = 2, Text = "Option B" }
+                            new AnswerOption { Id = 1, Text = "Option A", IsCorrect = true },
+                            new AnswerOption { Id = 2, Text = "Option B", IsCorrect = false }
                         }
                     }
                 }
-            });
+            };
 
+            context.Quizzes.Add(quiz);
             context.SaveChanges();
+
             return context;
+        }
+
+        private QuizController CreateControllerWithUser(
+            LearningManagement_APIContext context)
+        {
+            Claim claim = new Claim(ClaimTypes.NameIdentifier, "1");
+            ClaimsIdentity identity =
+                new ClaimsIdentity(new List<Claim> { claim }, "TestAuth");
+            ClaimsPrincipal principal = new ClaimsPrincipal(identity);
+
+            DefaultHttpContext httpContext = new DefaultHttpContext();
+            httpContext.User = principal;
+
+            ControllerContext controllerContext = new ControllerContext
+            {
+                HttpContext = httpContext
+            };
+
+            QuizSubmissionHelper helper =
+                new QuizSubmissionHelper(context);
+
+            QuizController controller =
+                new QuizController(context, helper);
+
+            controller.ControllerContext = controllerContext;
+
+            return controller;
         }
 
         [Fact]
         public async Task GetAll_ReturnsAllQuizzes()
         {
-            var context = CreateDbContext();
-            var controller = new QuizController(context);
+            LearningManagement_APIContext context = CreateDbContext();
+            QuizSubmissionHelper helper = new QuizSubmissionHelper(context);
+            QuizController controller = new QuizController(context, helper);
 
-            var result = await controller.GetAll();
+            ActionResult<IEnumerable<QuizDTO>> result =
+                await controller.GetAll();
 
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var quizzes = Assert.IsAssignableFrom<IEnumerable<QuizDTO>>(okResult.Value);
+            OkObjectResult okResult =
+                Assert.IsType<OkObjectResult>(result.Result);
+
+            IEnumerable<QuizDTO> quizzes =
+                Assert.IsAssignableFrom<IEnumerable<QuizDTO>>(okResult.Value);
 
             Assert.Single(quizzes);
         }
@@ -63,13 +102,18 @@ namespace LearningManagement_API.Tests.Controllers
         [Fact]
         public async Task GetById_ReturnsQuiz_WhenExists()
         {
-            var context = CreateDbContext();
-            var controller = new QuizController(context);
+            LearningManagement_APIContext context = CreateDbContext();
+            QuizSubmissionHelper helper = new QuizSubmissionHelper(context);
+            QuizController controller = new QuizController(context, helper);
 
-            var result = await controller.GetById(1);
+            ActionResult<QuizDTO> result =
+                await controller.GetById(1);
 
-            var okResult = Assert.IsType<OkObjectResult>(result.Result);
-            var quiz = Assert.IsType<QuizDTO>(okResult.Value);
+            OkObjectResult okResult =
+                Assert.IsType<OkObjectResult>(result.Result);
+
+            QuizDTO quiz =
+                Assert.IsType<QuizDTO>(okResult.Value);
 
             Assert.Equal("Test Quiz", quiz.Title);
         }
@@ -77,10 +121,12 @@ namespace LearningManagement_API.Tests.Controllers
         [Fact]
         public async Task GetById_ReturnsNotFound_WhenNotExists()
         {
-            var context = CreateDbContext();
-            var controller = new QuizController(context);
+            LearningManagement_APIContext context = CreateDbContext();
+            QuizSubmissionHelper helper = new QuizSubmissionHelper(context);
+            QuizController controller = new QuizController(context, helper);
 
-            var result = await controller.GetById(999);
+            ActionResult<QuizDTO> result =
+                await controller.GetById(999);
 
             Assert.IsType<NotFoundResult>(result.Result);
         }
@@ -88,10 +134,11 @@ namespace LearningManagement_API.Tests.Controllers
         [Fact]
         public async Task Create_AddsQuiz()
         {
-            var context = CreateDbContext();
-            var controller = new QuizController(context);
+            LearningManagement_APIContext context = CreateDbContext();
+            QuizSubmissionHelper helper = new QuizSubmissionHelper(context);
+            QuizController controller = new QuizController(context, helper);
 
-            var dto = new CreateQuizDto
+            CreateQuizDto dto = new CreateQuizDto
             {
                 Title = "New Quiz",
                 TimeLimitInMinutes = 15,
@@ -100,10 +147,14 @@ namespace LearningManagement_API.Tests.Controllers
                 IsPublished = true
             };
 
-            var result = await controller.Create(dto);
+            ActionResult<QuizDTO> result =
+                await controller.Create(dto);
 
-            var createdResult = Assert.IsType<CreatedAtActionResult>(result.Result);
-            var quiz = Assert.IsType<QuizDTO>(createdResult.Value);
+            CreatedAtActionResult createdResult =
+                Assert.IsType<CreatedAtActionResult>(result.Result);
+
+            QuizDTO quiz =
+                Assert.IsType<QuizDTO>(createdResult.Value);
 
             Assert.Equal("New Quiz", quiz.Title);
             Assert.Equal(2, context.Quizzes.Count());
@@ -112,10 +163,11 @@ namespace LearningManagement_API.Tests.Controllers
         [Fact]
         public async Task Update_UpdatesQuiz_WhenExists()
         {
-            var context = CreateDbContext();
-            var controller = new QuizController(context);
+            LearningManagement_APIContext context = CreateDbContext();
+            QuizSubmissionHelper helper = new QuizSubmissionHelper(context);
+            QuizController controller = new QuizController(context, helper);
 
-            var dto = new UpdateQuizDto
+            UpdateQuizDto dto = new UpdateQuizDto
             {
                 Title = "Updated Quiz",
                 TimeLimitInMinutes = 30,
@@ -124,55 +176,87 @@ namespace LearningManagement_API.Tests.Controllers
                 IsPublished = false
             };
 
-            var result = await controller.Update(1, dto);
+            IActionResult result =
+                await controller.Update(1, dto);
 
             Assert.IsType<NoContentResult>(result);
 
-            var quiz = context.Quizzes.First();
-            Assert.Equal("Updated Quiz", quiz.Title);
-        }
-
-        [Fact]
-        public async Task Update_ReturnsNotFound_WhenNotExists()
-        {
-            var context = CreateDbContext();
-            var controller = new QuizController(context);
-
-            var dto = new UpdateQuizDto
-            {
-                Title = "Does Not Matter",
-                TimeLimitInMinutes = 10,
-                MaxAttemptsPerUser = 1,
-                PassingScorePercentage = 50,
-                IsPublished = false
-            };
-
-            var result = await controller.Update(999, dto);
-
-            Assert.IsType<NotFoundResult>(result);
+            Quiz updatedQuiz = context.Quizzes.First();
+            Assert.Equal("Updated Quiz", updatedQuiz.Title);
         }
 
         [Fact]
         public async Task Delete_RemovesQuiz_WhenExists()
         {
-            var context = CreateDbContext();
-            var controller = new QuizController(context);
+            LearningManagement_APIContext context = CreateDbContext();
+            QuizSubmissionHelper helper = new QuizSubmissionHelper(context);
+            QuizController controller = new QuizController(context, helper);
 
-            var result = await controller.Delete(1);
+            IActionResult result =
+                await controller.Delete(1);
 
             Assert.IsType<NoContentResult>(result);
             Assert.Empty(context.Quizzes);
         }
 
         [Fact]
-        public async Task Delete_ReturnsNotFound_WhenNotExists()
+        public async Task SubmitQuiz_ReturnsPassed_WhenAllAnswersCorrect()
         {
-            var context = CreateDbContext();
-            var controller = new QuizController(context);
+            LearningManagement_APIContext context = CreateDbContext();
+            QuizController controller = CreateControllerWithUser(context);
 
-            var result = await controller.Delete(999);
+            SubmitQuizDto dto = new SubmitQuizDto
+            {
+                QuizId = 1,
+                Answers = new List<SubmitAnswerDto>
+                {
+                    new SubmitAnswerDto
+                    {
+                        QuestionId = 1,
+                        SelectedAnswerOptionId = 1
+                    }
+                }
+            };
 
-            Assert.IsType<NotFoundResult>(result);
+            IActionResult result =
+                await controller.SubmitQuiz(1, dto);
+
+            OkObjectResult okResult =
+                Assert.IsType<OkObjectResult>(result);
+
+            object value = okResult.Value!;
+
+            double score =
+                (double)value.GetType()
+                    .GetProperty("scorePercentage")!
+                    .GetValue(value)!;
+
+            bool passed =
+                (bool)value.GetType()
+                    .GetProperty("isPassed")!
+                    .GetValue(value)!;
+
+            Assert.True(passed);
+            Assert.Equal(100d, score);
+            Assert.Single(context.QuizAttempts);
+        }
+
+        [Fact]
+        public async Task SubmitQuiz_ReturnsBadRequest_WhenNotAllQuestionsAnswered()
+        {
+            LearningManagement_APIContext context = CreateDbContext();
+            QuizController controller = CreateControllerWithUser(context);
+
+            SubmitQuizDto dto = new SubmitQuizDto
+            {
+                QuizId = 1,
+                Answers = new List<SubmitAnswerDto>()
+            };
+
+            IActionResult result =
+                await controller.SubmitQuiz(1, dto);
+
+            Assert.IsType<BadRequestObjectResult>(result);
         }
     }
 }

@@ -69,5 +69,64 @@ namespace LearningManagement_API.Tests.Integration
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
         }
+
+
+        [Fact]
+        public async Task SubmitQuiz_Returns200_WhenUserAuthenticated()
+        {
+            string token = await GetAdminToken();
+
+            _client.DefaultRequestHeaders.Authorization =
+                new AuthenticationHeaderValue("Bearer", token);
+
+            SubmitQuizDto dto = new SubmitQuizDto
+            {
+                QuizId = 1,
+                Answers = new List<SubmitAnswerDto>
+        {
+            new SubmitAnswerDto
+            {
+                QuestionId = 1,
+                SelectedAnswerOptionId = 1
+            },
+            new SubmitAnswerDto
+            {
+                QuestionId = 2,
+                SelectedAnswerOptionId = 3
+            }
+        }
+            };
+
+            HttpResponseMessage response =
+                await _client.PostAsJsonAsync("/api/quiz/1/submit", dto);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task SubmitQuiz_Returns401_WhenUserNotAuthenticated()
+        {
+            SubmitQuizDto dto = new SubmitQuizDto
+            {
+                QuizId = 1,
+                Answers = new List<SubmitAnswerDto>
+        {
+            new SubmitAnswerDto
+            {
+                QuestionId = 1,
+                SelectedAnswerOptionId = 1
+            }
+        }
+            };
+
+            HttpResponseMessage response =
+                await _client.PostAsJsonAsync("/api/quiz/1/submit", dto);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+
     }
+
+
 }

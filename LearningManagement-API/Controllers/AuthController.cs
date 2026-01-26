@@ -72,7 +72,7 @@ namespace LearningManagement_API.Controllers
                 Email = request.Email,
                 FullName = request.FullName,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-                Role = "User" // standaardrol
+                Role = "User" 
             };
 
             _context.Users.Add(user);
