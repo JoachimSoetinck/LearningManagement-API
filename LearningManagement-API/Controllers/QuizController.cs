@@ -131,7 +131,7 @@ public class QuizController : ControllerBase
 
     [HttpPost("{id}/submit")]
     [Authorize]
-    public async Task<IActionResult> SubmitQuiz(int id, SubmitQuizDto dto)
+    public async Task<IActionResult> SubmitQuiz(int id, [FromBody] SubmitQuizDto dto)
     {
         ArgumentNullException.ThrowIfNull(dto);
 
@@ -144,9 +144,25 @@ public class QuizController : ControllerBase
         if (quiz == null)
             return NotFound();
 
+        if (!quiz.IsPublished)
+            return BadRequest("Quiz is not published");
+
+        if (!quiz.Questions.Any())
+            return BadRequest("Quiz has no questions");
+
         if (!_helper.AllQuestionsAnswered(dto, quiz))
             return BadRequest("All questions must be answered");
 
+        foreach (var answer in dto.Answers)
+        {
+            bool valid =
+                quiz.Questions.Any(q =>
+                    q.Id == answer.QuestionId &&
+                    q.AnswerOptions.Any(a => a.Id == answer.SelectedAnswerOptionId));
+
+            if (!valid)
+                return BadRequest("Invalid answer option");
+        }
 
         int attemptCount =
             await _context.QuizAttempts
@@ -155,7 +171,6 @@ public class QuizController : ControllerBase
         if (attemptCount >= quiz.MaxAttemptsPerUser)
             return BadRequest("Maximum number of attempts reached");
 
-     
         double score = _helper.CalculateScore(dto, quiz);
         bool passed = score >= quiz.PassingScorePercentage;
 
@@ -172,6 +187,76 @@ public class QuizController : ControllerBase
             isPassed = passed
         });
     }
+
+
+    [HttpGet("publishedQuizzes")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IEnumerable<QuizDTO>>> GetPublished()
+    {
+        var quizzes = await _context.Quizzes
+            .Where(q => q.IsPublished)
+            .Include(q => q.Questions)
+            .ThenInclude(q => q.AnswerOptions)
+            .Select(q => ToQuizDto(q))
+            .ToListAsync();
+
+        return Ok(quizzes);
+    }
+
+
+    [HttpPatch("{id}/publish")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> PublishQuiz(int id)
+    {
+        var quiz = await _context.Quizzes.FindAsync(id);
+        if (quiz == null)
+            return NotFound();
+
+        quiz.IsPublished = true;
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+
+    [HttpGet("{id}/attempts/me")]
+    [Authorize]
+    public async Task<IActionResult> GetMyAttempts(int id)
+    {
+        int userId = _helper.GetUserId(User);
+
+        var attempts = await _context.QuizAttempts
+            .Where(a => a.QuizId == id && a.UserId == userId)
+            .Select(a => new
+            {
+                a.Id,
+                a.ScorePercentage,
+                a.IsPassed,
+                a.CompletedAt
+            })
+            .ToListAsync();
+
+        return Ok(attempts);
+    }
+
+    [HttpGet("{id}/attempts")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> GetQuizAttempts(int id)
+    {
+        var attempts = await _context.QuizAttempts
+            .Where(a => a.QuizId == id)
+            .Select(a => new
+            {
+                a.UserId,
+                a.ScorePercentage,
+                a.IsPassed,
+                a.CompletedAt
+            })
+            .ToListAsync();
+
+        return Ok(attempts);
+    }
+
 
 
 }
