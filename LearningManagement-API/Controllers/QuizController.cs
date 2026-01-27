@@ -147,6 +147,15 @@ public class QuizController : ControllerBase
         if (!_helper.AllQuestionsAnswered(dto, quiz))
             return BadRequest("All questions must be answered");
 
+
+        int attemptCount =
+            await _context.QuizAttempts
+                .CountAsync(a => a.QuizId == quiz.Id && a.UserId == userId);
+
+        if (attemptCount >= quiz.MaxAttemptsPerUser)
+            return BadRequest("Maximum number of attempts reached");
+
+     
         double score = _helper.CalculateScore(dto, quiz);
         bool passed = score >= quiz.PassingScorePercentage;
 
