@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-#pragma warning disable CA1814 // Prefer jagged arrays over multidimensional
-
 namespace LearningManagement_API.Migrations
 {
     /// <inheritdoc />
@@ -147,54 +145,6 @@ namespace LearningManagement_API.Migrations
                         principalTable: "QuizAttempts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.InsertData(
-                table: "Quizzes",
-                columns: new[] { "Id", "IsPublished", "MaxAttemptsPerUser", "PassingScorePercentage", "TimeLimitInMinutes", "Title" },
-                values: new object[] { 1, true, 3, 80, 30, "Security Awareness" });
-
-            migrationBuilder.InsertData(
-                table: "Users",
-                columns: new[] { "Id", "Email", "FullName", "PasswordHash", "Role" },
-                values: new object[,]
-                {
-                    { 1, "admin@test.com", "Admin User", "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG", "Admin" },
-                    { 2, "employee1@company.com", "Employee One", "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG", "User" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "Questions",
-                columns: new[] { "Id", "QuizId", "Text" },
-                values: new object[,]
-                {
-                    { 1, 1, "What is the strongest password?" },
-                    { 2, 1, "What should you do when you receive a phishing email?" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "QuizAttempts",
-                columns: new[] { "Id", "CompletedAt", "IsPassed", "QuizId", "ScorePercentage", "StartedAt", "UserId" },
-                values: new object[] { 1, new DateTime(2024, 1, 1, 10, 10, 0, 0, DateTimeKind.Utc), true, 1, 100.0, new DateTime(2024, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc), 1 });
-
-            migrationBuilder.InsertData(
-                table: "AnswerOptions",
-                columns: new[] { "Id", "IsCorrect", "QuestionId", "Text" },
-                values: new object[,]
-                {
-                    { 1, false, 1, "Password123" },
-                    { 2, true, 1, "A long password with symbols and numbers" },
-                    { 3, false, 2, "Ignore the email" },
-                    { 4, true, 2, "Report it to IT security" }
-                });
-
-            migrationBuilder.InsertData(
-                table: "QuizAttemptAnswers",
-                columns: new[] { "Id", "QuestionId", "QuizAttemptId", "SelectedAnswerOptionId" },
-                values: new object[,]
-                {
-                    { 1, 1, 1, 2 },
-                    { 2, 2, 1, 4 }
                 });
 
             migrationBuilder.CreateIndex(

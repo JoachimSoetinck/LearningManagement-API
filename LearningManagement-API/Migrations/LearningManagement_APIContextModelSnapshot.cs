@@ -45,36 +45,6 @@ namespace LearningManagement_API.Migrations
                     b.HasIndex("QuestionId");
 
                     b.ToTable("AnswerOptions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            IsCorrect = false,
-                            QuestionId = 1,
-                            Text = "Password123"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            IsCorrect = true,
-                            QuestionId = 1,
-                            Text = "A long password with symbols and numbers"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            IsCorrect = false,
-                            QuestionId = 2,
-                            Text = "Ignore the email"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            IsCorrect = true,
-                            QuestionId = 2,
-                            Text = "Report it to IT security"
-                        });
                 });
 
             modelBuilder.Entity("LearningManagement_API.Model.Question", b =>
@@ -97,20 +67,6 @@ namespace LearningManagement_API.Migrations
                     b.HasIndex("QuizId");
 
                     b.ToTable("Questions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            QuizId = 1,
-                            Text = "What is the strongest password?"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            QuizId = 1,
-                            Text = "What should you do when you receive a phishing email?"
-                        });
                 });
 
             modelBuilder.Entity("LearningManagement_API.Model.Quiz", b =>
@@ -140,17 +96,6 @@ namespace LearningManagement_API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Quizzes");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            IsPublished = true,
-                            MaxAttemptsPerUser = 3,
-                            PassingScorePercentage = 80,
-                            TimeLimitInMinutes = 30,
-                            Title = "Security Awareness"
-                        });
                 });
 
             modelBuilder.Entity("LearningManagement_API.Model.QuizAttempt", b =>
@@ -186,18 +131,6 @@ namespace LearningManagement_API.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("QuizAttempts");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CompletedAt = new DateTime(2024, 1, 1, 10, 10, 0, 0, DateTimeKind.Utc),
-                            IsPassed = true,
-                            QuizId = 1,
-                            ScorePercentage = 100.0,
-                            StartedAt = new DateTime(2024, 1, 1, 10, 0, 0, 0, DateTimeKind.Utc),
-                            UserId = 1
-                        });
                 });
 
             modelBuilder.Entity("LearningManagement_API.Model.QuizAttemptAnswer", b =>
@@ -226,22 +159,6 @@ namespace LearningManagement_API.Migrations
                     b.HasIndex("SelectedAnswerOptionId");
 
                     b.ToTable("QuizAttemptAnswers");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            QuestionId = 1,
-                            QuizAttemptId = 1,
-                            SelectedAnswerOptionId = 2
-                        },
-                        new
-                        {
-                            Id = 2,
-                            QuestionId = 2,
-                            QuizAttemptId = 1,
-                            SelectedAnswerOptionId = 4
-                        });
                 });
 
             modelBuilder.Entity("LearningManagement_API.Model.User", b =>
@@ -271,24 +188,6 @@ namespace LearningManagement_API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Email = "admin@test.com",
-                            FullName = "Admin User",
-                            PasswordHash = "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG",
-                            Role = "Admin"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Email = "employee1@company.com",
-                            FullName = "Employee One",
-                            PasswordHash = "$2a$11$mrqGfIkqyS5upfGSxwr2hONR3UTiXffjG7QxQEY8tEwVvdS0oSxyG",
-                            Role = "User"
-                        });
                 });
 
             modelBuilder.Entity("LearningManagement_API.Model.AnswerOption", b =>

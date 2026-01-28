@@ -189,18 +189,23 @@ public class QuizController : ControllerBase
     }
 
 
-    [HttpGet("publishedQuizzes")]
+    [HttpGet("published")]
     [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<QuizDTO>>> GetPublished()
     {
-        var quizzes = await _context.Quizzes
-            .Where(q => q.IsPublished)
-            .Include(q => q.Questions)
-            .ThenInclude(q => q.AnswerOptions)
-            .Select(q => ToQuizDto(q))
-            .ToListAsync();
+      var quizzes = await _context.Quizzes
+        .Where(q => q.IsPublished)
+        .Select(q => new QuizOverviewDto
+        {
+            Id = q.Id,
+            Title = q.Title,
+            TimeLimitInMinutes = q.TimeLimitInMinutes,
+            MaxAttemptsPerUser = q.MaxAttemptsPerUser,
+            PassingScorePercentage = q.PassingScorePercentage
+        })
+        .ToListAsync();
 
-        return Ok(quizzes);
+    return Ok(quizzes);
     }
 
 

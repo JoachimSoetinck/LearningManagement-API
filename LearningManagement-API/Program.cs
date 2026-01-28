@@ -35,6 +35,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 
+
+
 // Swagger (Swashbuckle)
 builder.Services.AddEndpointsApiExplorer();
 const string schemeId = "bearer";
@@ -53,6 +55,18 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("NextJsPolicy", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:3000")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+
 
 var app = builder.Build();
 
@@ -60,8 +74,18 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<LearningManagement_APIContext>();
+    context.Database.Migrate();
+
+    DbInitializer.Seed(context);
 }
 
+
+
+
+app.UseCors("NextJsPolicy");
 app.UseHttpsRedirection();
 app.UseAuthentication(); // belangrijk: eerst authentication
 app.UseAuthorization();
