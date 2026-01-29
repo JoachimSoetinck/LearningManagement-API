@@ -106,14 +106,14 @@ namespace LearningManagement_API.Tests.Controllers
             QuizSubmissionHelper helper = new QuizSubmissionHelper(context);
             QuizController controller = new QuizController(context, helper);
 
-            ActionResult<QuizDTO> result =
+            ActionResult<QuizDetailDto> result =
                 await controller.GetById(1);
 
             OkObjectResult okResult =
                 Assert.IsType<OkObjectResult>(result.Result);
 
-            QuizDTO quiz =
-                Assert.IsType<QuizDTO>(okResult.Value);
+            QuizDetailDto quiz =
+                Assert.IsType<QuizDetailDto>(okResult.Value);
 
             Assert.Equal("Test Quiz", quiz.Title);
         }
@@ -125,7 +125,7 @@ namespace LearningManagement_API.Tests.Controllers
             QuizSubmissionHelper helper = new QuizSubmissionHelper(context);
             QuizController controller = new QuizController(context, helper);
 
-            ActionResult<QuizDTO> result =
+            ActionResult<QuizDetailDto> result =
                 await controller.GetById(999);
 
             Assert.IsType<NotFoundResult>(result.Result);
@@ -241,22 +241,5 @@ namespace LearningManagement_API.Tests.Controllers
             Assert.Single(context.QuizAttempts);
         }
 
-        [Fact]
-        public async Task SubmitQuiz_ReturnsBadRequest_WhenNotAllQuestionsAnswered()
-        {
-            LearningManagement_APIContext context = CreateDbContext();
-            QuizController controller = CreateControllerWithUser(context);
-
-            SubmitQuizDto dto = new SubmitQuizDto
-            {
-                QuizId = 1,
-                Answers = new List<SubmitAnswerDto>()
-            };
-
-            IActionResult result =
-                await controller.SubmitQuiz(1, dto);
-
-            Assert.IsType<BadRequestObjectResult>(result);
-        }
     }
 }

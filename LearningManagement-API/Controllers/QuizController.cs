@@ -37,14 +37,21 @@ public class QuizController : ControllerBase
 
     [HttpGet("{id}")]
     [AllowAnonymous]
-    public async Task<ActionResult<QuizDTO>> GetById(int id)
+    public async Task<ActionResult<QuizDetailDto>> GetById(int id)
     {
-        QuizDTO? quiz = await _context.Quizzes
-            .Include(q => q.Questions)
-            .ThenInclude(q => q.AnswerOptions)
-            .Where(q => q.Id == id)
-            .Select(q => ToQuizDto(q))
-            .FirstOrDefaultAsync();
+        QuizDetailDto? quiz = await _context.Quizzes
+        .Where(q => q.Id == id)
+        .Select(q => new QuizDetailDto
+        {
+            Id = q.Id,
+            Title = q.Title,
+            TimeLimitInMinutes = q.TimeLimitInMinutes,
+            MaxAttemptsPerUser = q.MaxAttemptsPerUser,
+            PassingScorePercentage = q.PassingScorePercentage,
+            IsPublished = q.IsPublished,
+            QuestionCount = q.Questions.Count
+        })
+        .FirstOrDefaultAsync();
 
         if (quiz == null)
             return NotFound();
@@ -150,23 +157,26 @@ public class QuizController : ControllerBase
         if (!quiz.Questions.Any())
             return BadRequest("Quiz has no questions");
 
-        if (!_helper.AllQuestionsAnswered(dto, quiz))
-            return BadRequest("All questions must be answered");
-
         foreach (var answer in dto.Answers)
         {
-            bool valid =
-                quiz.Questions.Any(q =>
-                    q.Id == answer.QuestionId &&
-                    q.AnswerOptions.Any(a => a.Id == answer.SelectedAnswerOptionId));
+            var question = quiz.Questions
+                .FirstOrDefault(q => q.Id == answer.QuestionId);
 
-            if (!valid)
-                return BadRequest("Invalid answer option");
+            if (question == null)
+                return BadRequest("Invalid question");
+
+            if (answer.SelectedAnswerOptionId != null)
+            {
+                bool validOption = question.AnswerOptions
+                    .Any(a => a.Id == answer.SelectedAnswerOptionId);
+
+                if (!validOption)
+                    return BadRequest("Invalid answer option");
+            }
         }
 
-        int attemptCount =
-            await _context.QuizAttempts
-                .CountAsync(a => a.QuizId == quiz.Id && a.UserId == userId);
+        int attemptCount = await _context.QuizAttempts
+            .CountAsync(a => a.QuizId == quiz.Id && a.UserId == userId);
 
         if (attemptCount >= quiz.MaxAttemptsPerUser)
             return BadRequest("Maximum number of attempts reached");

@@ -42,27 +42,26 @@ namespace LearningManagement_API.Helpers
         public double CalculateScore(SubmitQuizDto dto, Quiz quiz)
         {
             int correct = 0;
+            int total = quiz.Questions.Count;
 
-            foreach (SubmitAnswerDto answer in dto.Answers)
+            foreach (var question in quiz.Questions)
             {
-                Question? question =
-                    quiz.Questions.FirstOrDefault(q => q.Id == answer.QuestionId);
+                var givenAnswer = dto.Answers
+                    .FirstOrDefault(a => a.QuestionId == question.Id);
 
-                if (question == null)
-                    throw new ArgumentException("Invalid question");
+                if (givenAnswer?.SelectedAnswerOptionId == null)
+                    continue;
 
-                AnswerOption? option =
-                    question.AnswerOptions
-                        .FirstOrDefault(a => a.Id == answer.SelectedAnswerOptionId);
+                bool isCorrect = question.AnswerOptions
+                    .Any(a =>
+                        a.Id == givenAnswer.SelectedAnswerOptionId &&
+                        a.IsCorrect);
 
-                if (option == null)
-                    throw new ArgumentException("Invalid answer option");
-
-                if (option.IsCorrect)
+                if (isCorrect)
                     correct++;
             }
 
-            return (double)correct / quiz.Questions.Count * 100;
+            return Math.Round((double)correct / total * 100, 2);
         }
 
         public QuizAttempt CreateQuizAttempt(
