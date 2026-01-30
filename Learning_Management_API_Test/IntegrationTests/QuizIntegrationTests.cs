@@ -25,20 +25,18 @@ namespace LearningManagement_API.Tests.Integration
 
         private async Task<string> GetAdminToken()
         {
-            HttpResponseMessage response =
-                await _client.PostAsJsonAsync(
-                    "/api/auth/login",
-                    new
-                    {
-                        email = "admin@test.com",
-                        password = "Admin123!"
-                    });
+            var response = await _client.PostAsJsonAsync(
+                "/api/auth/login",
+                new
+                {
+                    email = "admin@test.com",
+                    password = "Admin123!"
+                });
 
             response.EnsureSuccessStatusCode();
 
-            Dictionary<string, string>? json =
-                await response.Content
-                    .ReadFromJsonAsync<Dictionary<string, string>>();
+            var json = await response.Content
+                .ReadFromJsonAsync<Dictionary<string, string>>();
 
             return json!["token"];
         }
@@ -48,30 +46,28 @@ namespace LearningManagement_API.Tests.Integration
             _client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
-            HttpResponseMessage response =
-                await _client.PostAsJsonAsync(
-                    "/api/quiz",
-                    new CreateQuizDto
-                    {
-                        Title = "Integration Test Quiz",
-                        TimeLimitInMinutes = 10,
-                        MaxAttemptsPerUser = 2,
-                        PassingScorePercentage = 60,
-                        IsPublished = true
-                    });
+            var response = await _client.PostAsJsonAsync(
+                "/api/quiz",
+                new CreateQuizDto
+                {
+                    Title = "Integration Test Quiz",
+                    TimeLimitInMinutes = 10,
+                    MaxAttemptsPerUser = 2,
+                    PassingScorePercentage = 60,
+                    IsPublished = true
+                });
 
-            response.EnsureSuccessStatusCode();
-
-            QuizDTO quiz =
-                await response.Content.ReadFromJsonAsync<QuizDTO>();
+            Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
             using var scope = _factory.Services.CreateScope();
             var db = scope.ServiceProvider
                 .GetRequiredService<LearningManagement_APIContext>();
 
-            Quiz entity = await db.Quizzes.FindAsync(quiz.Id);
+            Quiz quiz = await db.Quizzes
+                .OrderByDescending(q => q.Id)
+                .FirstAsync();
 
-            entity.Questions.Add(new Question
+            quiz.Questions.Add(new Question
             {
                 Text = "Question 1",
                 AnswerOptions = new List<AnswerOption>
@@ -81,7 +77,7 @@ namespace LearningManagement_API.Tests.Integration
                 }
             });
 
-            entity.Questions.Add(new Question
+            quiz.Questions.Add(new Question
             {
                 Text = "Question 2",
                 AnswerOptions = new List<AnswerOption>
@@ -113,7 +109,8 @@ namespace LearningManagement_API.Tests.Integration
                 Answers = quiz.Questions.Select(q => new SubmitAnswerDto
                 {
                     QuestionId = q.Id,
-                    SelectedAnswerOptionId = q.AnswerOptions.First().Id
+                    SelectedAnswerOptionId =
+                        q.AnswerOptions.First(a => a.IsCorrect).Id
                 }).ToList()
             };
         }
@@ -126,17 +123,16 @@ namespace LearningManagement_API.Tests.Integration
             _client.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
 
-            HttpResponseMessage response =
-                await _client.PostAsJsonAsync(
-                    "/api/quiz",
-                    new CreateQuizDto
-                    {
-                        Title = "Create Quiz Test",
-                        TimeLimitInMinutes = 10,
-                        MaxAttemptsPerUser = 2,
-                        PassingScorePercentage = 60,
-                        IsPublished = true
-                    });
+            var response = await _client.PostAsJsonAsync(
+                "/api/quiz",
+                new CreateQuizDto
+                {
+                    Title = "Create Quiz Test",
+                    TimeLimitInMinutes = 10,
+                    MaxAttemptsPerUser = 2,
+                    PassingScorePercentage = 60,
+                    IsPublished = true
+                });
 
             Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         }
@@ -144,7 +140,7 @@ namespace LearningManagement_API.Tests.Integration
         [Fact]
         public async Task SubmitQuiz_Returns401_WhenNotAuthenticated()
         {
-            SubmitQuizDto dto = new()
+            var dto = new SubmitQuizDto
             {
                 QuizId = 1,
                 Answers = new()
@@ -153,7 +149,7 @@ namespace LearningManagement_API.Tests.Integration
                 }
             };
 
-            HttpResponseMessage response =
+            var response =
                 await _client.PostAsJsonAsync("/api/quiz/1/submit", dto);
 
             Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
@@ -170,7 +166,7 @@ namespace LearningManagement_API.Tests.Integration
 
             SubmitQuizDto dto = await BuildValidSubmissionDto(quizId);
 
-            HttpResponseMessage response =
+            var response =
                 await _client.PostAsJsonAsync($"/api/quiz/{quizId}/submit", dto);
 
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -189,15 +185,18 @@ namespace LearningManagement_API.Tests.Integration
 
             Assert.Equal(
                 HttpStatusCode.OK,
-                (await _client.PostAsJsonAsync($"/api/quiz/{quizId}/submit", dto)).StatusCode);
+                (await _client.PostAsJsonAsync(
+                    $"/api/quiz/{quizId}/submit", dto)).StatusCode);
 
             Assert.Equal(
                 HttpStatusCode.OK,
-                (await _client.PostAsJsonAsync($"/api/quiz/{quizId}/submit", dto)).StatusCode);
+                (await _client.PostAsJsonAsync(
+                    $"/api/quiz/{quizId}/submit", dto)).StatusCode);
 
             Assert.Equal(
                 HttpStatusCode.BadRequest,
-                (await _client.PostAsJsonAsync($"/api/quiz/{quizId}/submit", dto)).StatusCode);
+                (await _client.PostAsJsonAsync(
+                    $"/api/quiz/{quizId}/submit", dto)).StatusCode);
         }
     }
 }

@@ -16,7 +16,9 @@ public class QuizController : ControllerBase
     private readonly LearningManagement_APIContext _context;
     private readonly QuizSubmissionHelper _helper;
 
-    public QuizController(LearningManagement_APIContext context, QuizSubmissionHelper helper)
+    public QuizController(
+        LearningManagement_APIContext context,
+        QuizSubmissionHelper helper)
     {
         _context = context;
         _helper = helper;
@@ -24,34 +26,43 @@ public class QuizController : ControllerBase
 
     [HttpGet]
     [AllowAnonymous]
-    public async Task<ActionResult<IEnumerable<QuizDTO>>> GetAll()
+    public async Task<ActionResult<IEnumerable<QuizDetailDto>>> GetAll()
     {
-        List<QuizDTO> quizzes = await _context.Quizzes
-            .Include(q => q.Questions)
-            .ThenInclude(q => q.AnswerOptions)
-            .Select(q => ToQuizDto(q))
+        var quizzes = await _context.Quizzes
+            .Select(q => new QuizDetailDto
+            {
+                Id = q.Id,
+                Title = q.Title,
+                TimeLimitInMinutes = q.TimeLimitInMinutes,
+                MaxAttemptsPerUser = q.MaxAttemptsPerUser,
+                PassingScorePercentage = q.PassingScorePercentage,
+                IsPublished = q.IsPublished,
+                QuestionCount = q.Questions.Count
+            })
             .ToListAsync();
 
         return Ok(quizzes);
     }
 
+
+
     [HttpGet("{id}")]
     [AllowAnonymous]
     public async Task<ActionResult<QuizDetailDto>> GetById(int id)
     {
-        QuizDetailDto? quiz = await _context.Quizzes
-        .Where(q => q.Id == id)
-        .Select(q => new QuizDetailDto
-        {
-            Id = q.Id,
-            Title = q.Title,
-            TimeLimitInMinutes = q.TimeLimitInMinutes,
-            MaxAttemptsPerUser = q.MaxAttemptsPerUser,
-            PassingScorePercentage = q.PassingScorePercentage,
-            IsPublished = q.IsPublished,
-            QuestionCount = q.Questions.Count
-        })
-        .FirstOrDefaultAsync();
+        var quiz = await _context.Quizzes
+            .Where(q => q.Id == id)
+            .Select(q => new QuizDetailDto
+            {
+                Id = q.Id,
+                Title = q.Title,
+                TimeLimitInMinutes = q.TimeLimitInMinutes,
+                MaxAttemptsPerUser = q.MaxAttemptsPerUser,
+                PassingScorePercentage = q.PassingScorePercentage,
+                IsPublished = q.IsPublished,
+                QuestionCount = q.Questions.Count
+            })
+            .FirstOrDefaultAsync();
 
         if (quiz == null)
             return NotFound();
@@ -61,9 +72,9 @@ public class QuizController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<QuizDTO>> Create(CreateQuizDto dto)
+    public async Task<IActionResult> Create(CreateQuizDto dto)
     {
-        Quiz quiz = new Quiz
+        var quiz = new Quiz
         {
             Title = dto.Title,
             TimeLimitInMinutes = dto.TimeLimitInMinutes,
@@ -75,15 +86,14 @@ public class QuizController : ControllerBase
         _context.Quizzes.Add(quiz);
         await _context.SaveChangesAsync();
 
-        QuizDTO result = ToQuizDto(quiz);
-        return CreatedAtAction(nameof(GetById), new { id = quiz.Id }, result);
+        return CreatedAtAction(nameof(GetById), new { id = quiz.Id }, null);
     }
 
     [HttpPut("{id}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Update(int id, UpdateQuizDto dto)
     {
-        Quiz? quiz = await _context.Quizzes.FindAsync(id);
+        var quiz = await _context.Quizzes.FindAsync(id);
         if (quiz == null)
             return NotFound();
 
@@ -101,7 +111,7 @@ public class QuizController : ControllerBase
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(int id)
     {
-        Quiz? quiz = await _context.Quizzes.FindAsync(id);
+        var quiz = await _context.Quizzes.FindAsync(id);
         if (quiz == null)
             return NotFound();
 
@@ -110,44 +120,47 @@ public class QuizController : ControllerBase
         return NoContent();
     }
 
-    private static QuizDTO ToQuizDto(Quiz q)
+    [HttpGet("{id}/take")]
+    [Authorize]
+    public async Task<IActionResult> TakeQuiz(int id)
     {
-        return new QuizDTO
-        {
-            Id = q.Id,
-            Title = q.Title,
-            TimeLimitInMinutes = q.TimeLimitInMinutes,
-            MaxAttemptsPerUser = q.MaxAttemptsPerUser,
-            PassingScorePercentage = q.PassingScorePercentage,
-            IsPublished = q.IsPublished,
-            Questions = q.Questions.Select(question => new QuestionDTO
+        var quiz = await _context.Quizzes
+            .Include(q => q.Questions)
+                .ThenInclude(q => q.AnswerOptions)
+            .Where(q => q.Id == id && q.IsPublished)
+            .Select(q => new
             {
-                Id = question.Id,
-                Text = question.Text,
-                AnswerOptions = question.AnswerOptions
-                    .Select(a => new AnswerDTO
+                q.Id,
+                q.Title,
+                Questions = q.Questions.Select(question => new
+                {
+                    question.Id,
+                    question.Text,
+                    AnswerOptions = question.AnswerOptions.Select(a => new
                     {
-                        Id = a.Id,
-                        Text = a.Text
-                    }).ToList()
-            }).ToList()
-        };
+                        a.Id,
+                        a.Text
+                    })
+                })
+            })
+            .FirstOrDefaultAsync();
+
+        if (quiz == null)
+            return NotFound();
+
+        return Ok(quiz);
     }
-
-
 
     [HttpPost("{id}/submit")]
     [Authorize]
     public async Task<IActionResult> SubmitQuiz(int id, [FromBody] SubmitQuizDto dto)
     {
-        ArgumentNullException.ThrowIfNull(dto);
-
-        if (id != dto.QuizId)
+        if (dto == null || id != dto.QuizId)
             return BadRequest("QuizId mismatch");
 
         int userId = _helper.GetUserId(User);
 
-        Quiz? quiz = await _helper.LoadQuizWithQuestionsAsync(id);
+        var quiz = await _helper.LoadQuizWithQuestionsAsync(id);
         if (quiz == null)
             return NotFound();
 
@@ -159,19 +172,14 @@ public class QuizController : ControllerBase
 
         foreach (var answer in dto.Answers)
         {
-            var question = quiz.Questions
-                .FirstOrDefault(q => q.Id == answer.QuestionId);
-
+            var question = quiz.Questions.FirstOrDefault(q => q.Id == answer.QuestionId);
             if (question == null)
                 return BadRequest("Invalid question");
 
-            if (answer.SelectedAnswerOptionId != null)
+            if (answer.SelectedAnswerOptionId != null &&
+                !question.AnswerOptions.Any(a => a.Id == answer.SelectedAnswerOptionId))
             {
-                bool validOption = question.AnswerOptions
-                    .Any(a => a.Id == answer.SelectedAnswerOptionId);
-
-                if (!validOption)
-                    return BadRequest("Invalid answer option");
+                return BadRequest("Invalid answer option");
             }
         }
 
@@ -184,8 +192,7 @@ public class QuizController : ControllerBase
         double score = _helper.CalculateScore(dto, quiz);
         bool passed = score >= quiz.PassingScorePercentage;
 
-        QuizAttempt attempt =
-            _helper.CreateQuizAttempt(dto, quiz, userId, score, passed);
+        var attempt = _helper.CreateQuizAttempt(dto, quiz, userId, score, passed);
 
         _context.QuizAttempts.Add(attempt);
         await _context.SaveChangesAsync();
@@ -197,42 +204,6 @@ public class QuizController : ControllerBase
             isPassed = passed
         });
     }
-
-
-    [HttpGet("published")]
-    [AllowAnonymous]
-    public async Task<ActionResult<IEnumerable<QuizDTO>>> GetPublished()
-    {
-      var quizzes = await _context.Quizzes
-        .Where(q => q.IsPublished)
-        .Select(q => new QuizOverviewDto
-        {
-            Id = q.Id,
-            Title = q.Title,
-            TimeLimitInMinutes = q.TimeLimitInMinutes,
-            MaxAttemptsPerUser = q.MaxAttemptsPerUser,
-            PassingScorePercentage = q.PassingScorePercentage
-        })
-        .ToListAsync();
-
-    return Ok(quizzes);
-    }
-
-
-    [HttpPatch("{id}/publish")]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> PublishQuiz(int id)
-    {
-        var quiz = await _context.Quizzes.FindAsync(id);
-        if (quiz == null)
-            return NotFound();
-
-        quiz.IsPublished = true;
-        await _context.SaveChangesAsync();
-
-        return NoContent();
-    }
-
 
     [HttpGet("{id}/attempts/me")]
     [Authorize]
@@ -271,7 +242,4 @@ public class QuizController : ControllerBase
 
         return Ok(attempts);
     }
-
-
-
 }

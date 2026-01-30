@@ -9,6 +9,7 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<QuizSubmissionHelper>();
+builder.Services.AddScoped<QuizQueryHelper>();
 // DbContext
 builder.Services.AddDbContext<LearningManagement_APIContext>(options =>
     options.UseSqlServer(
